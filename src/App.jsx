@@ -122,7 +122,7 @@ function Header() {
           <NavLink to="/services" className="nav-drop-trigger" onClick={onServicesClick}>Services <ChevronDown size={12} className="nav-drop-chev" /></NavLink>
           <div className="nav-drop-menu" role="menu" aria-label="All services">
             {navServices.map((s, i) => (
-              <Link key={s.id || s.title || i} to="/services" onClick={close} className="nav-drop-item"><span className="nav-drop-num">0{i + 1}</span><span>{s.title}</span></Link>
+              <Link key={s.id || s.title || i} to={`/services#service-${String(i + 1).padStart(2, '0')}`} onClick={close} className="nav-drop-item"><span className="nav-drop-num">0{i + 1}</span><span>{s.title}</span></Link>
             ))}
           </div>
         </div>
@@ -600,6 +600,17 @@ function Services() {
     ['A prestressed rock anchor turns the rock mass itself into the foundation. Anchors are drilled, grouted and tensioned so slopes and rafts are held against movement and uplift, not just friction.', 'Slope stabilisation and foundation raft protection against uplift are two faces of the same principle: anchor the structure to competent rock and prove the bond with load testing.', 'It is a direct answer for ghat slopes, abutments and rafts that cannot afford to move.'],
     ['Laboratory testing closes the loop between field and design. Soil is tested for density, sieve analysis, Atterberg limits, CBR and shear; rock for strength, density, porosity and point load index; water for pH, sulphate, chlorides and turbidity.', 'These parameters are what the geotechnical interpretation is written from. Without them, the field observations would be descriptions, not design values.', 'Testing to a consistent standard is how a site you have never seen becomes a foundation you can sign for.'],
   ];
+
+  const location = useLocation();
+  useEffect(() => {
+    if (location.hash) {
+      const id = location.hash.replace('#', '');
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  }, [location]);
   const items = useFallback
     ? services.map((s, i) => ({ ...s, body: detailParagraphs[i]?.join('\n\n') || '', image: s.image, imageAlt: s.imageAlt || s.title }))
     : serviceItems.map((s, i) => ({
@@ -615,7 +626,7 @@ function Services() {
       const Icon = typeof s.icon === 'string' ? (SERVICE_ICONS[s.icon] || Layers3) : (s.icon || Layers3);
       const body = paragraphs(s.body);
       return (
-        <article className={`service-article${i % 2 === 1 ? ' service-article--alt' : ''}`} key={s.id || s.title || i}>
+        <article id={`service-${String(i + 1).padStart(2, '0')}`} className={`service-article${i % 2 === 1 ? ' service-article--alt' : ''}`} key={s.id || s.title || i}>
           <div className="wrap service-article-grid">
             <div className="service-article-content">
               <div className="service-article-head">
