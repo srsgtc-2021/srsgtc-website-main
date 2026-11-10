@@ -6,6 +6,19 @@ import {
   Microscope, Ruler, Check, ChevronLeft, ChevronRight, ChevronDown,
   Mountain, Ship
 } from 'lucide-react';
+import { AuthProvider } from './admin/auth';
+import RequireAdmin from './admin/RequireAdmin';
+import AdminLogin from './admin/AdminLogin';
+import AdminLayout from './admin/AdminLayout';
+import AdminDashboard from './admin/AdminDashboard';
+import AdminImagesPage from './admin/AdminImagesPage';
+import AdminHome from './admin/AdminHome';
+import AdminServices from './admin/AdminServices';
+import AdminProjects from './admin/AdminProjects';
+import AdminTeam from './admin/AdminTeam';
+import AdminMedia from './admin/AdminMedia';
+import AdminSettings from './admin/AdminSettings';
+import { SiteContentProvider, useSiteContent, paragraphs } from './lib/siteContent';
 
 const services = [
   { title: 'Geotechnical investigation', text: 'Land and marine soil investigation for informed foundation design.', icon: Layers3, image: '/assets/Geotechnical%20Drilling%20Site%20Cutaway-1.png', imageAlt: 'Geotechnical drilling site cutaway illustration' },
@@ -15,6 +28,21 @@ const services = [
   { title: 'Prestressed rock anchor', text: 'Slope stabilisation and foundation raft protection against uplift.', icon: ShieldCheck },
   { title: 'Laboratory testing', text: 'Soil, rock and water testing to support geotechnical interpretation.', icon: Microscope },
 ];
+
+const SERVICE_ICONS = {
+  layers: Layers3,
+  compass: Compass,
+  drill: Drill,
+  waves: Waves,
+  shield: ShieldCheck,
+  microscope: Microscope,
+};
+
+const fallbackServiceImage = (slotKey, index) => {
+  const parsed = Number(String(slotKey || '').split('.').pop()) - 1;
+  const idx = Number.isFinite(parsed) && parsed >= 0 ? parsed : index;
+  return services[idx]?.image || null;
+};
 
 const projects = [
   { year: '2026', title: 'Soil investigation & contour survey for proposed 400 kV GIS substation at Padghe', client: 'M.S.E.T.C.L.' },
@@ -28,6 +56,8 @@ const projects = [
   { year: '2023', title: 'GTI work for widening of Mangalore–Tumkuru section of NH 73', client: 'DP Jain & Co. Infrastructure Pvt. Ltd.' },
   { year: '2021–22', title: 'Land and marine soil investigation for Chennai–Bengaluru Express Highway', client: 'DP Jain & Co. Infrastructure Pvt. Ltd.' },
 ];
+
+const genericProjectBody = 'This assignment was carried out as part of the SRS Geotech & Construction company profile, with field investigation, survey and testing coordinated to the project brief. The site conditions, access and working season all shaped how the investigation was sequenced, so the ground answers could be tied back to the design drawings.\n\nRepresentative photographs and test records from the work are held with the project documentation, and the findings were issued to the client and consultant for foundation and execution decisions.';
 
 const disciplines = ['Engineering', 'Geology', 'Survey', 'Drilling', 'Laboratory', 'Accounts'];
 
@@ -52,6 +82,8 @@ function Header() {
   const [open, setOpen] = useState(false);
   const [hidden, setHidden] = useState(false);
   const [serviceOpen, setServiceOpen] = useState(false);
+  const { serviceItems, loading, error } = useSiteContent();
+  const navServices = (loading || Boolean(error)) ? services : serviceItems;
   const location = useLocation();
   const isHome = location.pathname === '/';
   const isAbout = location.pathname === '/about';
@@ -89,8 +121,8 @@ function Header() {
         <div className={`nav-dropdown ${serviceOpen ? 'open' : ''}`} onMouseEnter={openServices} onMouseLeave={closeServices} onFocus={openServices} onBlur={onDropBlur}>
           <NavLink to="/services" className="nav-drop-trigger" onClick={onServicesClick}>Services <ChevronDown size={12} className="nav-drop-chev" /></NavLink>
           <div className="nav-drop-menu" role="menu" aria-label="All services">
-            {services.map((s, i) => (
-              <Link key={s.title} to="/services" onClick={close} className="nav-drop-item"><span className="nav-drop-num">0{i + 1}</span><span>{s.title}</span></Link>
+            {navServices.map((s, i) => (
+              <Link key={s.id || s.title || i} to="/services" onClick={close} className="nav-drop-item"><span className="nav-drop-num">0{i + 1}</span><span>{s.title}</span></Link>
             ))}
           </div>
         </div>
@@ -133,13 +165,33 @@ const marqueeImages = [
   { src: '/assets/page-13-06-packer-permeability-test.png', alt: 'On-site packer permeability test', label: 'Packer permeability test' },
 ];
 
-const marqueeTrack = [...marqueeImages, ...marqueeImages];
+const marqueeFallbackByKey = Object.fromEntries(
+  marqueeImages.map((m, i) => [`home.marquee.${String(i + 1).padStart(2, '0')}`, m])
+);
 
 function Marquee() {
+  const { marqueeItems, loading, error } = useSiteContent();
+  const useFallback = loading || Boolean(error);
+  const images = useFallback
+    ? marqueeImages
+    : marqueeItems
+        .map((row) => {
+          const fallback = marqueeFallbackByKey[row.slotKey];
+          const src = row.src || fallback?.src;
+          if (!src) return null;
+          return {
+            src,
+            alt: row.alt || fallback?.alt || row.label,
+            label: row.label || fallback?.label,
+          };
+        })
+        .filter(Boolean);
+  if (!images.length) return null;
+  const track = [...images, ...images];
   return <div className="marquee-wrap" aria-label="Field and marine operations">
     <div className="marquee">
       <div className="marquee-track">
-        {marqueeTrack.map((img,i)=> <figure key={i} className="marquee-item"><img src={img.src} alt={img.alt} loading="lazy"/><figcaption>{img.label}</figcaption></figure>)}
+        {track.map((img,i)=> <figure key={i} className="marquee-item"><img src={img.src} alt={img.alt} loading="lazy"/><figcaption>{img.label}</figcaption></figure>)}
       </div>
     </div>
   </div>;
@@ -204,6 +256,20 @@ function ExperienceCarousel() {
 }
 
 function Home() {
+  const { serviceItems, projectItems, featureUrl, loading, error } = useSiteContent();
+  const useFallback = loading || Boolean(error);
+  const mergedServices = (useFallback ? services : serviceItems).map((s, i) => {
+    const fallback = services[i];
+    return {
+      ...s,
+      title: s.title || fallback?.title || '',
+      text: s.summary || s.text || fallback?.text || '',
+      icon: s.icon || fallback?.icon,
+      image: s.image || fallbackServiceImage(s.slotKey, i) || fallback?.image || null,
+      imageAlt: s.imageAlt || s.title || fallback?.imageAlt || '',
+    };
+  });
+  const teaserProjects = (useFallback ? projects : projectItems).slice(0, 3);
   const bg = [
     { src: '/assets/01-offshore-hero.png', alt: 'Offshore drilling platform over open water' },
     { src: '/assets/02-jackup-barge-hero.png', alt: 'SRS marine jack-up barge at port' },
@@ -215,7 +281,7 @@ function Home() {
     { id: 'marine', label: 'MARINE', icon: Waves },
   ];
   const fieldImages = [
-    { src: '/assets/offshore-survey.jpeg', alt: 'Marine geotechnical drilling operation', caption: 'MARINE INVESTIGATION' },
+    { src: featureUrl || '/assets/offshore-survey.jpeg', alt: 'Marine geotechnical drilling operation', caption: 'MARINE INVESTIGATION' },
   ];
   const [activeField, setActiveField] = useState(2);
   const activeItem = fieldImages[0];
@@ -269,7 +335,7 @@ function Home() {
     </section>
     <section className="section wrap">
       <div className="section-heading"><div><div className="eyebrow">WHAT WE DO</div><h2>Integrated ground<br/>engineering services.</h2></div><Link to="/services" className="plain-link">View all services <ArrowUpRight size={15}/></Link></div>
-      <div className="service-preview">{services.slice(0,4).map((s,i)=><Link to="/services" className="service-tile" key={s.title}><span className="tile-number">0{i+1}</span><h3>{s.title}</h3><p>{s.text}</p>{s.image && <span className="tile-media"><img src={s.image} alt={s.imageAlt || s.title} loading="lazy"/></span>}<ArrowUpRight className="tile-arrow" size={17}/></Link>)}</div>
+      <div className="service-preview">{mergedServices.slice(0,4).map((s,i)=><Link to="/services" className="service-tile" key={s.id || s.title || i}><span className="tile-number">0{i+1}</span><h3>{s.title}</h3><p>{s.text}</p>{s.image && <span className="tile-media"><img src={s.image} alt={s.imageAlt || s.title} loading="lazy"/></span>}<ArrowUpRight className="tile-arrow" size={17}/></Link>)}</div>
     </section>
     <Marquee/>
     <Reveal>
@@ -321,20 +387,13 @@ function Home() {
       <span className="field-ops-frame-corner field-ops-frame-corner-tl" aria-hidden="true" />
       <span className="field-ops-frame-corner field-ops-frame-corner-br" aria-hidden="true" />
       <div className="field-ops-extra">
-        <section className="section wrap field-ops-experience"><div className="section-heading"><div><div className="eyebrow">SELECTED EXPERIENCE</div><h2>Work that supports<br/>what comes next.</h2></div><Link to="/projects" className="plain-link">Explore projects <ArrowUpRight size={15}/></Link></div><div className="project-teaser">{projects.slice(0,3).map(p=><div className="teaser-row" key={p.title}><span>{p.year}</span><div><h3>{p.title}</h3><p>{p.client}</p></div><ArrowUpRight size={17}/></div>)}</div></section>
+        <section className="section wrap field-ops-experience"><div className="section-heading"><div><div className="eyebrow">SELECTED EXPERIENCE</div><h2>Work that supports<br/>what comes next.</h2></div><Link to="/projects" className="plain-link">Explore projects <ArrowUpRight size={15}/></Link></div><div className="project-teaser">{teaserProjects.map(p=><div className="teaser-row" key={p.id || p.title}><span>{p.year}</span><div><h3>{p.title}</h3><p>{p.client}</p></div><ArrowUpRight size={17}/></div>)}</div></section>
       </div>
     </section>
     </Reveal>
     <ContactBanner/>
   </>;
 }
-const ABOUT_PHOTOS = {
-  proprietor: null,
-  workforce: null,
-  equipmentHero: null,
-  equipmentItems: [null, null, null, null],
-  people: {},
-};
 
 function Reveal({ children, className = '' }) {
   const ref = useRef(null);
@@ -379,12 +438,32 @@ function PhotoSlot({ src, alt, caption, label, variant = '' }) {
 }
 
 function About() {
+  const { aboutUrl, teamItems, aboutItems, loading, error } = useSiteContent();
+  const useFallback = loading || Boolean(error);
+  const photos = {
+    proprietor: aboutUrl('about.proprietor'),
+    workforce: aboutUrl('about.workforce'),
+    equipmentHero: aboutUrl('about.equipment.hero'),
+  };
+  const personnel = (useFallback ? people : teamItems).map((m) => ({
+    id: m.id,
+    name: m.name,
+    field: m.role || m.field || '',
+    qualification: m.qualification || '',
+    years: m.experience || m.years || '',
+    photo: m.photo || null,
+  }));
   const equipmentCaptions = [
     'Rotary core & hydraulic drilling rigs',
     'SPT & soil sampling systems',
     'Laboratory testing — CBR / permeability / ERT',
     'Field testing — plate load / packer permeability',
   ];
+  const equipmentRows = useFallback
+    ? equipmentCaptions.map((caption) => ({ src: null, caption }))
+    : aboutItems
+        .filter((r) => r.slotKey.startsWith('about.equipment.item.'))
+        .map((r, i) => ({ src: r.src, caption: r.label || equipmentCaptions[i] || `Equipment ${i + 1}` }));
   return (
     <div className="about-page">
       <Reveal>
@@ -422,7 +501,7 @@ function About() {
 
       <Reveal>
         <section className="treatment-b section wrap split-section proprietor-split">
-          <PhotoSlot src={ABOUT_PHOTOS.proprietor} alt="Proprietor Mr. Rajesh Singh, field operations" label="Proprietor — field operations photograph to be added" variant="tall" />
+          <PhotoSlot src={photos.proprietor} alt="Proprietor Mr. Rajesh Singh, field operations" label="Proprietor — field operations photograph to be added" variant="tall" />
           <div className="split-content">
             <div className="eyebrow">PROPRIETOR</div>
             <h2>Mr. Rajesh Singh</h2>
@@ -445,7 +524,7 @@ function About() {
             <p>Behind the proprietor is a team of engineers, geologists, surveyors, drafting staff, supervisors, drilling and marine crews, laboratory staff and support teams — available for both field and office work.</p>
             <p>Our strength lies in a skilled and experienced workforce comprising geologists, civil engineers, drilling operators, supervisors, mechanics, laboratory technicians and trained field personnel. Supported by dedicated technical and operational teams, we bring together the expertise, equipment and execution capabilities required to handle projects efficiently, safely and in accordance with industry standards.</p>
           </div>
-          <PhotoSlot src={ABOUT_PHOTOS.workforce} alt="Technical team on site" label="Technical team — field operations photograph to be added" variant="tall" />
+          <PhotoSlot src={photos.workforce} alt="Technical team on site" label="Technical team — field operations photograph to be added" variant="tall" />
         </section>
       </Reveal>
 
@@ -453,14 +532,14 @@ function About() {
         <section className="treatment-b section wrap people-section">
           <div className="section-heading">
             <div><div className="eyebrow">OUR PEOPLE</div><h2>Key personnel.</h2></div>
-            <p className="heading-note">A qualified, experienced team across geology, engineering, survey, drilling, supervision, laboratory and accounts. Individual portraits to be added.</p>
+            <p className="heading-note">A qualified, experienced team across geology, engineering, survey, drilling, supervision, laboratory and accounts.</p>
           </div>
           <div className="people-grid">
-            {people.map(p => (
-              <article key={p.name} className="person-card">
-                <PhotoSlot src={ABOUT_PHOTOS.people[p.name] || null} alt={`${p.name}, ${p.field}`} label={`${p.name} — portrait to be added`} variant="portrait" />
+            {personnel.map((p, i) => (
+              <article key={p.id || `${p.name}-${i}`} className="person-card">
+                <PhotoSlot src={p.photo} alt={`${p.name}, ${p.field}`} label={`${p.name} — portrait to be added`} variant="portrait" />
                 <div className="person-body">
-                  <div className="person-top"><h3>{p.name}</h3><span className="person-years">{p.years}</span></div>
+                  <div className="person-top"><h3>{p.name}</h3>{p.years && <span className="person-years">{p.years}</span>}</div>
                   <div className="person-meta">
                     <span><small>Qualification</small><b>{p.qualification}</b></span>
                     <span><small>Field</small><b>{p.field}</b></span>
@@ -479,11 +558,11 @@ function About() {
             <p>SRS Geotech &amp; Construction maintains a comprehensive range of modern drilling equipment, field investigation instruments, marine plant and specialised soil mechanics laboratory facilities. Our equipment portfolio includes rotary core drilling rigs, hydraulic drilling systems, Standard Penetration Test (SPT) accessories, soil sampling and testing equipment, CBR and permeability testing systems, Electrical Resistivity Tomography (ERT) instruments, and marine support facilities. These resources enable us to undertake diverse geotechnical investigations, subsurface exploration, field testing and specialised survey operations across varied project environments.</p>
           </div>
           <div className="wrap showcase-hero-wrap">
-            <PhotoSlot src={ABOUT_PHOTOS.equipmentHero} alt="Marine operations — jack-up barge, pontoon and offshore platform" caption="Marine operations — jack-up / pontoon / offshore platform" label="Marine operations photograph to be added" variant="wide" />
+            <PhotoSlot src={photos.equipmentHero} alt="Marine operations — jack-up barge, pontoon and offshore platform" caption="Marine operations — jack-up / pontoon / offshore platform" label="Marine operations photograph to be added" variant="wide" />
           </div>
           <div className="wrap showcase-grid">
-            {equipmentCaptions.map((cap, i) => (
-              <PhotoSlot key={cap} src={ABOUT_PHOTOS.equipmentItems[i] || null} alt={cap} caption={cap} label={`${cap} — photograph to be added`} variant="standard" />
+            {equipmentRows.map((item, i) => (
+              <PhotoSlot key={`${item.caption}-${i}`} src={item.src} alt={item.caption} caption={item.caption} label={`${item.caption} — photograph to be added`} variant="standard" />
             ))}
           </div>
         </section>
@@ -510,6 +589,8 @@ function About() {
 }
 
 function Services() {
+  const { serviceItems, loading, error } = useSiteContent();
+  const useFallback = loading || Boolean(error);
   const applications = ['Dams, barrages, canals and bridges','Irrigation and drainage','Rainwater harvesting','Housing, commercial and office complexes','Mining exploration and cement factories','Industrial projects','Roads, railways, runways and tunnels','Electrical towers, chimneys and tanks','Ports and harbours','Refinery projects','Water, gas and oil pipeline projects'];
   const detailParagraphs = [
     ['Our geotechnical investigation begins with reading the site before any rig reaches it. Soil boring from 100 mm to 150 mm diameter and rock drilling in PX, HX, NX, BX and EX sizes give us the strata, strength and groundwater picture that foundation design depends on.', 'From strong sandy overburden to weathered rock, each borehole is logged, sampled and photographed so the interpretation can be traced back to the ground. Marine and land rigs are deployed to the same brief — safe access, steady drilling, clean samples.', 'The result is not just a report; it is a ground model the design team can build on with confidence, long after the rigs have left.'],
@@ -519,29 +600,43 @@ function Services() {
     ['A prestressed rock anchor turns the rock mass itself into the foundation. Anchors are drilled, grouted and tensioned so slopes and rafts are held against movement and uplift, not just friction.', 'Slope stabilisation and foundation raft protection against uplift are two faces of the same principle: anchor the structure to competent rock and prove the bond with load testing.', 'It is a direct answer for ghat slopes, abutments and rafts that cannot afford to move.'],
     ['Laboratory testing closes the loop between field and design. Soil is tested for density, sieve analysis, Atterberg limits, CBR and shear; rock for strength, density, porosity and point load index; water for pH, sulphate, chlorides and turbidity.', 'These parameters are what the geotechnical interpretation is written from. Without them, the field observations would be descriptions, not design values.', 'Testing to a consistent standard is how a site you have never seen becomes a foundation you can sign for.'],
   ];
+  const items = useFallback
+    ? services.map((s, i) => ({ ...s, body: detailParagraphs[i]?.join('\n\n') || '', image: s.image, imageAlt: s.imageAlt || s.title }))
+    : serviceItems.map((s, i) => ({
+        ...s,
+        title: s.title || `Service ${i + 1}`,
+        body: s.body || (detailParagraphs[i]?.join('\n\n') || ''),
+        image: s.image || fallbackServiceImage(s.slotKey, i),
+        imageAlt: s.title,
+      }));
   return <div className="services-page">
     <PageIntroDark eyebrow="02 / SERVICES" title={<>Ground engineering,<br/><span>from investigation to execution.</span></>} text="A connected range of geotechnical, drilling, foundation, survey and laboratory services for infrastructure and development projects."/>
-    {services.map((s, i) => {
-      const Icon = s.icon;
+    {items.map((s, i) => {
+      const Icon = typeof s.icon === 'string' ? (SERVICE_ICONS[s.icon] || Layers3) : (s.icon || Layers3);
+      const body = paragraphs(s.body);
       return (
-        <article className={`service-article${i % 2 === 1 ? ' service-article--alt' : ''}`} key={s.title}>
+        <article className={`service-article${i % 2 === 1 ? ' service-article--alt' : ''}`} key={s.id || s.title || i}>
           <div className="wrap service-article-grid">
             <div className="service-article-content">
               <div className="service-article-head">
-                <span className="service-num">0{i + 1}</span>
+                <span className="service-num">{String(i + 1).padStart(2, '0')}</span>
                 <span className="service-icon"><Icon size={22} /></span>
                 <h2>{s.title}</h2>
               </div>
               <div className="article-body">
-                <p>{detailParagraphs[i][0]}</p>
-                <p>{detailParagraphs[i][1]}</p>
-                <p>{detailParagraphs[i][2]}</p>
+                {body.length
+                  ? body.map((text, j) => <p key={j}>{text}</p>)
+                  : s.summary && <p>{s.summary}</p>}
               </div>
               <Link to="/contact" className="article-link">Discuss this service <ArrowUpRight size={15} /></Link>
             </div>
-            <div className="photo-slot photo-slot--empty photo-slot--standard article-slot" role="img" aria-label={`${s.title} — photograph to be added`}>
-              <span className="photo-slot-label">{s.title} — photograph to be added</span>
-            </div>
+            {s.image
+              ? <figure className="photo-slot photo-slot--filled photo-slot--standard article-slot">
+                  <img src={s.image} alt={s.imageAlt || s.title} loading="lazy" />
+                </figure>
+              : <div className="photo-slot photo-slot--empty photo-slot--standard article-slot" role="img" aria-label={`${s.title} — photograph to be added`}>
+                  <span className="photo-slot-label">{s.title} — photograph to be added</span>
+                </div>}
           </div>
         </article>
       );
@@ -553,9 +648,22 @@ function Services() {
 }
 
 function Projects() {
+  const { projectItems, galleryItems, loading, error } = useSiteContent();
+  const useFallback = loading || Boolean(error);
   const [year, setYear] = useState('All');
-  const years = ['All','2026','2025','2024','2023','2021–22'];
-  const filtered = year === 'All' ? projects : projects.filter(p=>p.year===year);
+  const items = useFallback
+    ? projects.map((p) => ({ ...p, body: genericProjectBody, image: null }))
+    : projectItems.map((p) => ({
+        ...p,
+        title: p.title || 'Untitled project',
+        body: p.body || genericProjectBody,
+        image: p.image,
+      }));
+  const years = ['All', ...Array.from(new Set(items.map((p) => p.year).filter(Boolean)))];
+  const filtered = year === 'All' ? items : items.filter((p) => p.year === year);
+  const gallery = useFallback
+    ? ['Field investigation', 'Drilling operations', 'Micro piling', 'Rock core logging & sampling'].map((label) => ({ label, src: null }))
+    : galleryItems.map((g) => ({ id: g.id, label: g.label || 'Field photograph', src: g.src }));
   const onYearKeyDown = (e) => {
     if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
       e.preventDefault();
@@ -566,8 +674,8 @@ function Projects() {
   };
   return <div className="projects-page">
     <PageIntroDark eyebrow="03 / EXPERIENCE" title={<>Selected projects.<br/><span>Real work, varied ground.</span></>} text="A selection of assignments listed in the SRS Geotech & Construction company profile."/>
-    <section className="section wrap"><div className="project-toolbar"><div className="eyebrow">PROJECT REFERENCES</div><div className="filter-tabs" role="tablist" aria-label="Filter by year" onKeyDown={onYearKeyDown}>{years.map(y=><button className={year===y?'active':''} role="tab" aria-selected={year===y} onClick={()=>setYear(y)} key={y}>{y}</button>)}</div></div><div className="project-list">{filtered.map((p,i)=><article className={`project-article${i % 2 === 1 ? ' project-article--alt' : ''}`} key={p.title}><div className="project-article-grid"><div className="project-article-content"><div className="project-article-meta"><span className="project-year">{p.year}</span><span aria-hidden="true">·</span><span>Client {p.client}</span></div><h2>{p.title}</h2><div className="article-body"><p>This assignment was carried out as part of the SRS Geotech & Construction company profile, with field investigation, survey and testing coordinated to the project brief. The site conditions, access and working season all shaped how the investigation was sequenced, so the ground answers could be tied back to the design drawings.</p><p>Representative photographs and test records from the work are held with the project documentation, and the findings were issued to the client and consultant for foundation and execution decisions.</p></div><Link to="/contact" className="article-link">Discuss a similar project <ArrowUpRight size={15} /></Link></div><div className="photo-slot photo-slot--empty photo-slot--standard article-slot" role="img" aria-label={`${p.title} — photograph to be added`}><span className="photo-slot-label">{p.title} — photograph to be added</span></div></div></article>)}</div></section>
-    <section className="gallery-section"><div className="wrap"><div className="section-heading"><div><div className="eyebrow">ON-SITE PHOTOGRAPHS</div><h2>Work in the field.</h2></div><p>Selected field photographs from the company profile.</p></div><div className="photo-grid"><div className="photo-slot photo-slot--empty photo-slot--standard photo-large" role="img" aria-label="Field investigation — photograph to be added"><span className="photo-slot-label">Field investigation — photograph to be added</span></div><div className="photo-slot photo-slot--empty photo-slot--standard" role="img" aria-label="Drilling operations — photograph to be added"><span className="photo-slot-label">Drilling operations — photograph to be added</span></div><div className="photo-slot photo-slot--empty photo-slot--standard" role="img" aria-label="Micro piling — photograph to be added"><span className="photo-slot-label">Micro piling — photograph to be added</span></div><div className="photo-slot photo-slot--empty photo-slot--standard" role="img" aria-label="Rock core logging & sampling — photograph to be added"><span className="photo-slot-label">Rock core logging & sampling — photograph to be added</span></div></div></div></section>
+    <section className="section wrap"><div className="project-toolbar"><div className="eyebrow">PROJECT REFERENCES</div><div className="filter-tabs" role="tablist" aria-label="Filter by year" onKeyDown={onYearKeyDown}>{years.map(y=><button className={year===y?'active':''} role="tab" aria-selected={year===y} onClick={()=>setYear(y)} key={y}>{y}</button>)}</div></div><div className="project-list">{filtered.map((p,i)=><article className={`project-article${i % 2 === 1 ? ' project-article--alt' : ''}`} key={p.id || p.title}><div className="project-article-grid"><div className="project-article-content"><div className="project-article-meta"><span className="project-year">{p.year}</span><span aria-hidden="true">·</span><span>Client {p.client}</span></div><h2>{p.title}</h2><div className="article-body">{paragraphs(p.body).map((text, j) => <p key={j}>{text}</p>)}</div><Link to="/contact" className="article-link">Discuss a similar project <ArrowUpRight size={15} /></Link></div>{p.image ? <figure className="photo-slot photo-slot--filled photo-slot--standard article-slot"><img src={p.image} alt={p.imageAlt || p.title} loading="lazy" /></figure> : <div className="photo-slot photo-slot--empty photo-slot--standard article-slot" role="img" aria-label={`${p.title} — photograph to be added`}><span className="photo-slot-label">{p.title} — photograph to be added</span></div>}</div></article>)}</div></section>
+    {gallery.length > 0 && <section className="gallery-section"><div className="wrap"><div className="section-heading"><div><div className="eyebrow">ON-SITE PHOTOGRAPHS</div><h2>Work in the field.</h2></div><p>Selected field photographs from the company profile.</p></div><div className="photo-grid">{gallery.map((g, i) => g.src ? <figure key={g.id || `${g.label}-${i}`} className={`photo-slot photo-slot--filled photo-slot--standard${i === 0 ? ' photo-large' : ''}`}><img src={g.src} alt={g.label} loading="lazy" /></figure> : <div key={g.id || `${g.label}-${i}`} className={`photo-slot photo-slot--empty photo-slot--standard${i === 0 ? ' photo-large' : ''}`} role="img" aria-label={`${g.label} — photograph to be added`}><span className="photo-slot-label">{g.label} — photograph to be added</span></div>)}</div></div></section>}
     <ContactBanner/>
   </div>;
 }
@@ -602,6 +710,28 @@ function ContactBanner() {
 function App() {
   const location = useLocation();
   React.useEffect(()=>{window.scrollTo(0,0)},[location.pathname]);
-  return <><Header/><main><Routes><Route path="/" element={<Home/>}/><Route path="/about" element={<About/>}/><Route path="/company" element={<Navigate to="/about" replace/>}/><Route path="/services" element={<Services/>}/><Route path="/projects" element={<Projects/>}/><Route path="/contact" element={<Contact/>}/></Routes></main><Footer/></>;
+
+  if (location.pathname === '/admin' || location.pathname.startsWith('/admin/')) {
+    return (
+      <AuthProvider>
+        <Routes>
+          <Route path="/admin/login" element={<AdminLogin/>} />
+          <Route path="/admin" element={<RequireAdmin><AdminLayout/></RequireAdmin>}>
+            <Route index element={<AdminDashboard/>} />
+            <Route path="home" element={<AdminHome />} />
+            <Route path="about" element={<AdminImagesPage title="About" description="Manage the About-page images. New images are added to the equipment grid." table="about_images" prefix="about" addSlotKeyPrefix="about.equipment.item" addLabel="Add equipment image" />} />
+            <Route path="services" element={<AdminServices />} />
+            <Route path="projects" element={<AdminProjects />} />
+            <Route path="team" element={<AdminTeam />} />
+            <Route path="media" element={<AdminMedia />} />
+            <Route path="settings" element={<AdminSettings />} />
+          </Route>
+          <Route path="/admin/*" element={<Navigate to="/admin" replace/>} />
+        </Routes>
+      </AuthProvider>
+    );
+  }
+
+  return <SiteContentProvider><Header/><main><Routes><Route path="/" element={<Home/>}/><Route path="/about" element={<About/>}/><Route path="/company" element={<Navigate to="/about" replace/>}/><Route path="/services" element={<Services/>}/><Route path="/projects" element={<Projects/>}/><Route path="/contact" element={<Contact/>}/></Routes></main><Footer/></SiteContentProvider>;
 }
 export default App;
