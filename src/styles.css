@@ -164,7 +164,7 @@
 .exp-dots{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);z-index:2;display:flex;gap:8px}
 .exp-dots button{width:30px;height:4px;border:0;border-radius:2px;background:#00000033;transition:background .2s,width .2s;padding:0}
 .exp-dots button.active{background:var(--accent);width:44px}
-@media(max-width:680px){.exp-slide{height:420px}.exp-next{right:12px}.exp-dots{bottom:14px}.exp-banner-wrap{background-attachment:scroll;background-position:center 72%;min-height:62vh}.exp-banner-wrap .banner-inner{padding:28px 24px}}
+@media(max-width:680px){.exp-slide{height:420px}.exp-next{right:12px}.exp-dots{bottom:14px}.exp-banner-wrap{background-attachment:fixed;background-position:center 72%;min-height:62vh}.exp-banner-wrap .banner-inner{padding:28px 24px}}
 @media(prefers-reduced-motion:reduce){.exp-track{transition:none}}
 
 
