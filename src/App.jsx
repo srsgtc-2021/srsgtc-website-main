@@ -387,7 +387,7 @@ function Home() {
       <span className="field-ops-frame-corner field-ops-frame-corner-tl" aria-hidden="true" />
       <span className="field-ops-frame-corner field-ops-frame-corner-br" aria-hidden="true" />
       <div className="field-ops-extra">
-        <section className="section wrap field-ops-experience"><div className="section-heading"><div><div className="eyebrow">SELECTED EXPERIENCE</div><h2>Work that supports<br/>what comes next.</h2></div><Link to="/projects" className="plain-link">Explore projects <ArrowUpRight size={15}/></Link></div><div className="project-teaser">{teaserProjects.map(p=><div className="teaser-row" key={p.id || p.title}><span>{p.year}</span><div><h3>{p.title}</h3><p>{p.client}</p></div><ArrowUpRight size={17}/></div>)}</div></section>
+        <section className="section wrap field-ops-experience"><div className="section-heading"><div><div className="eyebrow">SELECTED EXPERIENCE</div><h2>Work that supports<br/>what comes next.</h2></div><Link to="/projects" className="plain-link">Explore projects <ArrowUpRight size={15}/></Link></div><div className="project-teaser">{teaserProjects.map((p,i)=><Link to={`/projects#project-${String(i + 1).padStart(2, '0')}`} className="teaser-row" key={p.id || p.title}><span>{p.year}</span><div><h3>{p.title}</h3><p>{p.client}</p></div><ArrowUpRight size={17}/></Link>)}</div></section>
       </div>
     </section>
     </Reveal>
@@ -682,6 +682,27 @@ function Projects() {
       }));
   const years = ['All', ...Array.from(new Set(items.map((p) => p.year).filter(Boolean)))];
   const filtered = year === 'All' ? items : items.filter((p) => p.year === year);
+  const location = useLocation();
+  useEffect(() => {
+    if (!location.hash) return;
+    if (year !== 'All') { setYear('All'); return; }
+    const id = location.hash.replace('#', '');
+    let frame;
+    let attempts = 0;
+    const scrollToTarget = () => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+      if (attempts < 60) {
+        attempts += 1;
+        frame = requestAnimationFrame(scrollToTarget);
+      }
+    };
+    frame = requestAnimationFrame(scrollToTarget);
+    return () => cancelAnimationFrame(frame);
+  }, [location, loading, year]);
   const gallery = useFallback
     ? ['Field investigation', 'Drilling operations', 'Micro piling', 'Rock core logging & sampling'].map((label) => ({ label, src: null }))
     : galleryItems.map((g) => ({ id: g.id, label: g.label || 'Field photograph', src: g.src }));
@@ -695,7 +716,7 @@ function Projects() {
   };
   return <div className="projects-page">
     <PageIntroDark eyebrow="03 / EXPERIENCE" title={<>Selected projects.<br/><span>Real work, varied ground.</span></>} text="A selection of assignments listed in the SRS Geotech & Construction company profile."/>
-    <section className="section wrap"><div className="project-toolbar"><div className="eyebrow">PROJECT REFERENCES</div><div className="filter-tabs" role="tablist" aria-label="Filter by year" onKeyDown={onYearKeyDown}>{years.map(y=><button className={year===y?'active':''} role="tab" aria-selected={year===y} onClick={()=>setYear(y)} key={y}>{y}</button>)}</div></div><div className="project-list">{filtered.map((p,i)=><article className={`project-article${i % 2 === 1 ? ' project-article--alt' : ''}`} key={p.id || p.title}><div className="project-article-grid"><div className="project-article-content"><div className="project-article-meta"><span className="project-year">{p.year}</span><span aria-hidden="true">·</span><span>Client {p.client}</span></div><h2>{p.title}</h2><div className="article-body">{paragraphs(p.body).map((text, j) => <p key={j}>{text}</p>)}</div><Link to="/contact" className="article-link">Discuss a similar project <ArrowUpRight size={15} /></Link></div>{p.image ? <figure className="photo-slot photo-slot--filled photo-slot--standard article-slot"><img src={p.image} alt={p.imageAlt || p.title} loading="lazy" /></figure> : <div className="photo-slot photo-slot--empty photo-slot--standard article-slot" role="img" aria-label={`${p.title} — photograph to be added`}><span className="photo-slot-label">{p.title} — photograph to be added</span></div>}</div></article>)}</div></section>
+    <section className="section wrap"><div className="project-toolbar"><div className="eyebrow">PROJECT REFERENCES</div><div className="filter-tabs" role="tablist" aria-label="Filter by year" onKeyDown={onYearKeyDown}>{years.map(y=><button className={year===y?'active':''} role="tab" aria-selected={year===y} onClick={()=>setYear(y)} key={y}>{y}</button>)}</div></div><div className="project-list">{filtered.map((p,i)=><article id={`project-${String(i + 1).padStart(2, '0')}`} className={`project-article${i % 2 === 1 ? ' project-article--alt' : ''}`} key={p.id || p.title}><div className="project-article-grid"><div className="project-article-content"><div className="project-article-meta"><span className="project-year">{p.year}</span><span aria-hidden="true">·</span><span>Client {p.client}</span></div><h2>{p.title}</h2><div className="article-body">{paragraphs(p.body).map((text, j) => <p key={j}>{text}</p>)}</div><Link to="/contact" className="article-link">Discuss a similar project <ArrowUpRight size={15} /></Link></div>{p.image ? <figure className="photo-slot photo-slot--filled photo-slot--standard article-slot"><img src={p.image} alt={p.imageAlt || p.title} loading="lazy" /></figure> : <div className="photo-slot photo-slot--empty photo-slot--standard article-slot" role="img" aria-label={`${p.title} — photograph to be added`}><span className="photo-slot-label">{p.title} — photograph to be added</span></div>}</div></article>)}</div></section>
     {gallery.length > 0 && <section className="gallery-section"><div className="wrap"><div className="section-heading"><div><div className="eyebrow">ON-SITE PHOTOGRAPHS</div><h2>Work in the field.</h2></div><p>Selected field photographs from the company profile.</p></div><div className="photo-grid">{gallery.map((g, i) => g.src ? <figure key={g.id || `${g.label}-${i}`} className={`photo-slot photo-slot--filled photo-slot--standard${i === 0 ? ' photo-large' : ''}`}><img src={g.src} alt={g.label} loading="lazy" /></figure> : <div key={g.id || `${g.label}-${i}`} className={`photo-slot photo-slot--empty photo-slot--standard${i === 0 ? ' photo-large' : ''}`} role="img" aria-label={`${g.label} — photograph to be added`}><span className="photo-slot-label">{g.label} — photograph to be added</span></div>)}</div></div></section>}
     <ContactBanner/>
   </div>;
