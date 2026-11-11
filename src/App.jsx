@@ -603,14 +603,24 @@ function Services() {
 
   const location = useLocation();
   useEffect(() => {
-    if (location.hash) {
-      const id = location.hash.replace('#', '');
+    if (!location.hash) return;
+    const id = location.hash.replace('#', '');
+    let frame;
+    let attempts = 0;
+    const scrollToTarget = () => {
       const el = document.getElementById(id);
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
       }
-    }
-  }, [location]);
+      if (attempts < 60) {
+        attempts += 1;
+        frame = requestAnimationFrame(scrollToTarget);
+      }
+    };
+    frame = requestAnimationFrame(scrollToTarget);
+    return () => cancelAnimationFrame(frame);
+  }, [location, loading]);
   const items = useFallback
     ? services.map((s, i) => ({ ...s, body: detailParagraphs[i]?.join('\n\n') || '', image: s.image, imageAlt: s.imageAlt || s.title }))
     : serviceItems.map((s, i) => ({
@@ -720,7 +730,7 @@ function ContactBanner() {
 
 function App() {
   const location = useLocation();
-  React.useEffect(()=>{window.scrollTo(0,0)},[location.pathname]);
+  React.useEffect(()=>{ if (!location.hash) window.scrollTo(0,0); },[location.pathname, location.hash]);
 
   if (location.pathname === '/admin' || location.pathname.startsWith('/admin/')) {
     return (

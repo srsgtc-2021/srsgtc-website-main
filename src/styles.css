@@ -366,7 +366,8 @@
 .services-page .technical-section .section-heading h2{color:#202124;font:300 40px/1.08 Manrope,sans-serif;letter-spacing:-.02em}
 .services-page .technical-grid h3{color:#202124;font:600 17px/1.4 Manrope,sans-serif}
 .services-page .technical-grid li{color:#74777b}
-.service-article{padding:48px 0;border-bottom:1px solid var(--line)}
+.service-article{padding:48px 0;border-bottom:1px solid var(--line);scroll-margin-top:96px}
+@media(max-width:680px){.service-article{scroll-margin-top:84px}}
 .service-article-grid{display:grid;grid-template-columns:43fr 57fr;gap:44px;align-items:center}
 .service-article--alt .service-article-content{order:2}
 .service-article--alt .article-slot{order:1}
