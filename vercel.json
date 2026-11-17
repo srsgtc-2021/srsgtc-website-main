@@ -1,3 +1,38 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "redirects": [
+    { "source": "/company", "destination": "/about", "permanent": true }
+  ],
+  "rewrites": [
+    { "source": "/admin/(.*)", "destination": "/admin" },
+    { "source": "/(.*)", "destination": "/index" }
+  ],
+  "headers": [
+    {
+      "source": "/admin",
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
+    },
+    {
+      "source": "/admin/(.*)",
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
+    },
+    {
+      "source": "/admin.html",
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
+    },
+    {
+      "source": "/build-meta.json",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+    }
+  ],
+  "functions": {
+    "api/rebuild.js": { "maxDuration": 30 }
+  },
+  "crons": [
+    { "path": "/api/rebuild", "schedule": "0 3 * * *" }
+  ]
 }

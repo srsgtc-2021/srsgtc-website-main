@@ -11,6 +11,7 @@ const EMPTY = {
   gallery: [],
   team: [],
   home: [],
+  seo: [],
   loading: true,
   error: '',
 };
@@ -24,23 +25,43 @@ export function paragraphs(text) {
     .filter(Boolean);
 }
 
-async function fetchAll() {
-  const results = await Promise.all([
-    supabase.from('marquee_images').select('*').eq('is_active', true).order('sort_order', { ascending: true }),
-    supabase.from('about_images').select('*').eq('is_active', true).order('sort_order', { ascending: true }),
-    supabase.from('services').select('*').eq('is_active', true).order('sort_order', { ascending: true }),
-    supabase.from('projects').select('*').eq('is_active', true).order('sort_order', { ascending: true }),
-    supabase.from('project_gallery').select('*').eq('is_active', true).order('sort_order', { ascending: true }),
-    supabase.from('team_members').select('*').eq('is_active', true).order('sort_order', { ascending: true }),
-    supabase.from('home_images').select('*').eq('is_active', true).order('sort_order', { ascending: true }),
+export async function fetchAll() {
+  const timeoutSignal = typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+    ? AbortSignal.timeout(20000)
+    : null;
+  const query = (table) => {
+    const builder = supabase.from(table).select('*').eq('is_active', true).order('sort_order', { ascending: true });
+    return timeoutSignal ? builder.abortSignal(timeoutSignal) : builder;
+  };
+  const contentPromise = Promise.all([
+    query('marquee_images'),
+    query('about_images'),
+    query('services'),
+    query('projects'),
+    query('project_gallery'),
+    query('team_members'),
+    query('home_images'),
   ]);
+  const seoBuilder = supabase.from('seo_pages').select('*');
+  const seoPromise = (timeoutSignal ? seoBuilder.abortSignal(timeoutSignal) : seoBuilder)
+    .then(({ data }) => (data || []).map((row) => ({
+      ...row,
+      og_image_url: resolveImageUrl(row.og_image_url) || null,
+    })))
+    .catch(() => []);
+
+  const [results, seo] = await Promise.all([contentPromise, seoPromise]);
   const [marquee, about, services, projects, gallery, team, home] = results.map((r) => r.data || []);
   const firstError = results.find((r) => r.error)?.error;
-  return { marquee, about, services, projects, gallery, team, home, error: firstError?.message || '' };
+  return { marquee, about, services, projects, gallery, team, home, seo, error: firstError?.message || '' };
 }
 
-export function SiteContentProvider({ children }) {
-  const [state, setState] = useState(EMPTY);
+export function SiteContentProvider({ children, initialData }) {
+  const [state, setState] = useState(() => (
+    initialData
+      ? { ...EMPTY, ...initialData, loading: false, error: initialData.error || '' }
+      : EMPTY
+  ));
 
   useEffect(() => {
     let active = true;

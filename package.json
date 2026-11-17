@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node scripts/build.mjs",
+    "build:client": "vite build",
+    "build:ssr": "vite build --config vite.ssr.config.js",
+    "prerender": "node scripts/prerender-seo.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -15,10 +15,14 @@ import AdminImagesPage from './admin/AdminImagesPage';
 import AdminHome from './admin/AdminHome';
 import AdminServices from './admin/AdminServices';
 import AdminProjects from './admin/AdminProjects';
+import AdminSeo from './admin/AdminSeo';
 import AdminTeam from './admin/AdminTeam';
 import AdminMedia from './admin/AdminMedia';
 import AdminSettings from './admin/AdminSettings';
 import { SiteContentProvider, useSiteContent, paragraphs } from './lib/siteContent';
+import SeoHead from './seo/SeoHead';
+import StructuredData from './seo/StructuredData';
+import AdminNoindex from './seo/AdminNoindex';
 
 const services = [
   { title: 'Geotechnical investigation', text: 'Land and marine soil investigation for informed foundation design.', icon: Layers3, image: '/assets/Geotechnical%20Drilling%20Site%20Cutaway-1.png', imageAlt: 'Geotechnical drilling site cutaway illustration' },
@@ -749,13 +753,14 @@ function ContactBanner() {
   return <section className="exp-banner-wrap"><div className="wrap banner-inner"><div><div className="eyebrow light">HAVE A PROJECT IN MIND?</div><h2>Let’s build on<br/>solid ground.</h2></div><Link to="/contact" className="button light-button">Talk to our team <ArrowRight size={16}/></Link></div></section>;
 }
 
-function App() {
+function App({ initialContent }) {
   const location = useLocation();
   React.useEffect(()=>{ if (!location.hash) window.scrollTo(0,0); },[location.pathname, location.hash]);
 
   if (location.pathname === '/admin' || location.pathname.startsWith('/admin/')) {
     return (
       <AuthProvider>
+        <AdminNoindex/>
         <Routes>
           <Route path="/admin/login" element={<AdminLogin/>} />
           <Route path="/admin" element={<RequireAdmin><AdminLayout/></RequireAdmin>}>
@@ -764,6 +769,7 @@ function App() {
             <Route path="about" element={<AdminImagesPage title="About" description="Manage the About-page images. New images are added to the equipment grid." table="about_images" prefix="about" addSlotKeyPrefix="about.equipment.item" addLabel="Add equipment image" />} />
             <Route path="services" element={<AdminServices />} />
             <Route path="projects" element={<AdminProjects />} />
+            <Route path="seo" element={<AdminSeo />} />
             <Route path="team" element={<AdminTeam />} />
             <Route path="media" element={<AdminMedia />} />
             <Route path="settings" element={<AdminSettings />} />
@@ -774,6 +780,6 @@ function App() {
     );
   }
 
-  return <SiteContentProvider><Header/><main><Routes><Route path="/" element={<Home/>}/><Route path="/about" element={<About/>}/><Route path="/company" element={<Navigate to="/about" replace/>}/><Route path="/services" element={<Services/>}/><Route path="/projects" element={<Projects/>}/><Route path="/contact" element={<Contact/>}/></Routes></main><Footer/></SiteContentProvider>;
+  return <SiteContentProvider initialData={initialContent}><SeoHead/><StructuredData/><Header/><main><Routes><Route path="/" element={<Home/>}/><Route path="/about" element={<About/>}/><Route path="/company" element={<Navigate to="/about" replace/>}/><Route path="/services" element={<Services/>}/><Route path="/projects" element={<Projects/>}/><Route path="/contact" element={<Contact/>}/></Routes></main><Footer/></SiteContentProvider>;
 }
 export default App;

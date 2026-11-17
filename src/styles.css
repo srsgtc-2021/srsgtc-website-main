@@ -178,9 +178,10 @@ a.teaser-row:hover>svg{color:var(--fo-accent);transform:translate(2px,-2px)}
 .about-page .section-heading h2,.about-page .body-copy h2,.about-page .split-content h2,.about-page .showcase-intro h2{color:#f4f4f1}
 .about-page .heading-note{color:#c9cecf}
 .about-page .body-copy p,.about-page .split-content p,.about-page .showcase-intro p{color:#d3d9da}
-.reveal{opacity:0;transform:translateY(14px);transition:opacity .6s ease,transform .6s ease}
-.reveal.is-visible{opacity:1;transform:none}
-@media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}}
+.reveal{opacity:1;transform:none;transition:opacity .6s ease,transform .6s ease}
+.js .reveal{opacity:0;transform:translateY(14px)}
+.js .reveal.is-visible{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){.reveal,.js .reveal{opacity:1;transform:none;transition:none}}
 .about-page .treatment-a{background:#101619;border-top:1px solid rgba(255,255,255,.10)}
 .about-page .treatment-a:first-child{border-top:0}
 .about-page .about-overview{padding-top:128px;display:grid;grid-template-columns:280px 1fr;gap:85px;align-items:start}

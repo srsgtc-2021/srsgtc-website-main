@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, Home, Info, Wrench, FolderKanban, Users, Images, Settings, LogOut, Menu, X,
+  LayoutDashboard, Home, Info, Wrench, FolderKanban, Search, Users, Images, Settings, LogOut, Menu, X,
 } from 'lucide-react';
 import { useAuth } from './auth';
 import './admin.css';
@@ -12,6 +12,7 @@ const NAV = [
   { to: '/admin/about', label: 'About', icon: Info },
   { to: '/admin/services', label: 'Services', icon: Wrench },
   { to: '/admin/projects', label: 'Projects', icon: FolderKanban },
+  { to: '/admin/seo', label: 'SEO Manager', icon: Search },
   { to: '/admin/team', label: 'Team Management', icon: Users },
   { to: '/admin/media', label: 'Media Library', icon: Images },
   { to: '/admin/settings', label: 'Settings', icon: Settings },

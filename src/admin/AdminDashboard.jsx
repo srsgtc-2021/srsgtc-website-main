@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowUpRight, Image as ImageIcon } from 'lucide-react';
+import { ArrowUpRight, Image as ImageIcon, Search } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import './admin.css';
 
@@ -53,6 +53,14 @@ export default function AdminDashboard() {
         <div className="admin-stat"><span>Pending</span><b>{loading ? '…' : Math.max(0, total - filled)}</b><small>to upload</small></div>
         <div className="admin-stat"><span>Team members</span><b>{loading ? '…' : team}</b><small>profiles</small></div>
       </div>
+
+      <section className="admin-card admin-seo-shortcut">
+        <div className="admin-seo-shortcut-copy">
+          <div className="settings-card-head"><Search size={18} /><h2>SEO Manager</h2></div>
+          <p>Control page titles, descriptions, social images, indexing and publication status for the five public pages.</p>
+        </div>
+        <Link className="admin-btn ghost" to="/admin/seo">Open SEO Manager <ArrowUpRight size={15} /></Link>
+      </section>
 
       <section className="admin-card">
         <div className="admin-card-head">

@@ -5,6 +5,12 @@ import { useAuth } from './auth';
 import { listMediaFiles, formatBytes } from './mediaUtils';
 import './admin.css';
 
+const formatStamp = (value) => {
+  if (!value) return '—';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString();
+};
+
 export default function AdminSettings() {
   const { user } = useAuth();
   const [password, setPassword] = useState('');
@@ -15,6 +21,7 @@ export default function AdminSettings() {
   const [media, setMedia] = useState({ count: 0, size: 0 });
   const [mediaLoading, setMediaLoading] = useState(true);
   const [counts, setCounts] = useState({ total: 0, filled: 0, team: 0 });
+  const [build, setBuild] = useState({ builtAt: '', latest: '', stale: false });
   const [admins, setAdmins] = useState([]);
   const [error, setError] = useState('');
 
@@ -51,6 +58,28 @@ export default function AdminSettings() {
       });
       setCounts({ total, filled, team });
     });
+
+    const builtAt = typeof window !== 'undefined'
+      ? (window.__SRS_CONTENT_SNAPSHOT_AT__ || window.__SRS_BUILT_AT__ || '')
+      : '';
+    const timestampTables = [...tables.map((t) => t.table), 'seo_pages', 'seo_state'];
+    Promise.all(timestampTables.map((table) => (
+      supabase.from(table).select('updated_at').order('updated_at', { ascending: false }).limit(1)
+    ))).then((results) => {
+      if (!active) return;
+      const latest = results
+        .map((r) => r.data?.[0]?.updated_at)
+        .filter(Boolean)
+        .sort()
+        .pop() || '';
+      const latestTime = latest ? new Date(latest).getTime() : NaN;
+      const builtTime = builtAt ? new Date(builtAt).getTime() : NaN;
+      setBuild({
+        builtAt,
+        latest,
+        stale: Number.isFinite(latestTime) && Number.isFinite(builtTime) && latestTime > builtTime,
+      });
+    }).catch(() => {});
 
     supabase.from('admin_allowlist').select('*').order('created_at', { ascending: true }).then(({ data, error: err }) => {
       if (!active) return;
@@ -127,6 +156,13 @@ export default function AdminSettings() {
           <p className="settings-line"><span>Images set</span><b>{counts.filled}</b></p>
           <p className="settings-line"><span>Pending</span><b>{Math.max(0, counts.total - counts.filled)}</b></p>
           <p className="settings-line"><span>Team members</span><b>{counts.team}</b></p>
+          <p className="settings-line"><span>Published snapshot</span><b>{formatStamp(build.builtAt)}</b></p>
+          <p className="settings-line"><span>Newest content</span><b>{formatStamp(build.latest)}</b></p>
+          {build.stale && (
+            <div className="admin-error">Content is newer than the published snapshot. Redeploy the site to refresh the public pages.</div>
+          )}
+          {!build.builtAt && <p className="settings-note">Build timestamp is available in production builds.</p>}
+          <p className="settings-note">The newest content check includes SEO overrides and reset events.</p>
         </section>
 
         <section className="admin-card settings-card">
